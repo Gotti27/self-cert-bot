@@ -7,6 +7,8 @@
 #include <netdb.h>
 #include <string>
 
-addrinfo* resolver(const std::string &domain);
+std::string generate_random_string(int len);
+
+addrinfo* resolve_domain(const std::string &domain);
 
 #endif //UTILS_H

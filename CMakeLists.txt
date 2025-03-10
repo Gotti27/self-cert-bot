@@ -13,7 +13,7 @@ add_executable(self_cert_bot src/main.cpp
 )
 
 target_include_directories(self_cert_bot PRIVATE include)
-find_package(OpenSSL REQUIRED)
 
+find_package(OpenSSL REQUIRED)
 target_link_libraries(self_cert_bot OpenSSL::SSL OpenSSL::Crypto)
 
