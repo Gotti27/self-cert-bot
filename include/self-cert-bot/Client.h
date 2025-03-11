@@ -4,11 +4,20 @@
 
 #ifndef CLIENT_H
 #define CLIENT_H
+#include <string>
 
 namespace certbot {
 
 class Client {
+private:
+    std::string domain;
 
+public:
+    explicit Client(const std::string &domain) {
+        this->domain = domain;
+    }
+
+    void start() const;
 };
 
 } // certbot
