@@ -21,7 +21,7 @@ std::string generate_random_string(const int len) {
     }
 
     for (int i = 0; i < len; ++i) {
-        generated += alphanum[tmp_s[i] % sizeof(alphanum)];
+        generated += alphanum[tmp_s[i] % (sizeof(alphanum) - 1)];
     }
 
     return generated;
