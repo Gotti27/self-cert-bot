@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <openssl/evp.h>
 
 #include "self-cert-bot/Client.h"
 #include "self-cert-bot/Server.h"
@@ -20,6 +21,8 @@ int main(const int argc, char *argv[]) {
     }
 
     const std::string domain = argv[1];
+
+    OpenSSL_add_all_algorithms();
 
     if (const std::string mode = argv[2]; mode == "client") {
         const auto client = certbot::Client("test.com");
