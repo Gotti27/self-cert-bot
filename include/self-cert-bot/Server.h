@@ -33,7 +33,7 @@ public:
 
     ~Server();
 
-    void start() const;
+    void start();
 };
 
 } // certbot
