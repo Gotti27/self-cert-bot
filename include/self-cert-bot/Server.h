@@ -13,12 +13,17 @@ class Server {
 private:
     std::string domain;
     X509 *root_cert = nullptr;
+    SSL_CTX *ctx = nullptr;
     struct serverConfiguration {
         std::string ca_cert_path;
         std::string ca_key_path;
+        std::string ca_passkey_path;
     } conf = {};
 
     void load_configuration(const std::string &configuration_path);
+    void load_bot_root_certificate();
+    void configure_SSL_context();
+
 public:
     explicit Server(const std::string& domain, const std::string& conf_path) {
         this->domain = domain;

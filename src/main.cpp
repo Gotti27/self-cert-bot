@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <openssl/evp.h>
+#include <openssl/ssl.h>
 
 #include "self-cert-bot/Client.h"
 #include "self-cert-bot/Server.h"
@@ -11,6 +12,9 @@
 #define BUF_SIZE 500
 
 int main(const int argc, char *argv[]) {
+    SSL_library_init();
+    SSL_load_error_strings();
+    OpenSSL_add_all_algorithms();
 
     for (int i = 0; i < argc; i++) {
         std::cout << argv[i] << std::endl;
@@ -21,8 +25,6 @@ int main(const int argc, char *argv[]) {
     }
 
     const std::string domain = argv[1];
-
-    OpenSSL_add_all_algorithms();
 
     if (const std::string mode = argv[2]; mode == "client") {
         const auto client = certbot::Client("test.com");

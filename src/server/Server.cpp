@@ -12,7 +12,9 @@
 #include <arpa/inet.h>
 #include <iostream>
 #include <thread>
+#include <openssl/err.h>
 #include <openssl/pem.h>
+#include <openssl/ssl.h>
 #include <nlohmann/json.hpp>
 
 namespace certbot {
@@ -114,8 +116,40 @@ namespace certbot {
         freeaddrinfo(result);
 
         const int serverSocket = configureServer();
+        configure_SSL_context();
         std::cout << generate_random_string(64) << std::endl;
 
         serverBody(serverSocket);
+        // SSL_CTX_free(ctx);
+    }
+
+    void Server::configure_SSL_context() {
+        const SSL_METHOD *method = TLS_server_method();
+        ctx = SSL_CTX_new(method);
+        if (!ctx) {
+            std::cerr << "Failed to create SSL context\n";
+        }
+
+        SSL_CTX_set_default_passwd_cb(ctx, [](char *buf, int size, int rwflag, void *u) {
+            const auto password = static_cast<const char *>(u);
+            const int len = static_cast<int>(strlen(password));
+
+            memcpy(buf, password, len);
+            return len;
+        });
+
+        std::ifstream passkey_file(conf.ca_passkey_path);
+        std::stringstream buffer;
+        buffer << passkey_file.rdbuf();
+        std::string passkey = buffer.str();
+
+        SSL_CTX_set_default_passwd_cb_userdata(ctx, (void *) passkey.c_str());
+
+        if (
+            SSL_CTX_use_certificate_file(ctx, conf.ca_cert_path.c_str(), SSL_FILETYPE_PEM) <= 0 ||
+            SSL_CTX_use_PrivateKey_file(ctx, conf.ca_key_path.c_str(), SSL_FILETYPE_PEM) <= 0
+        ) {
+            std::cerr << "Failed to load certificate file\n";
+        }
     }
 } // certbot
