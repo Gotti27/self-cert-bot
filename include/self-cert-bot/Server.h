@@ -13,12 +13,17 @@ class Server {
 private:
     std::string domain;
     X509 *root_cert = nullptr;
-    void load_bot_root_certificate(const std::string &cert_path);
+    struct serverConfiguration {
+        std::string ca_cert_path;
+        std::string ca_key_path;
+    } conf = {};
 
+    void load_configuration(const std::string &configuration_path);
 public:
-    explicit Server(const std::string& domain, const std::string& cert_path) {
+    explicit Server(const std::string& domain, const std::string& conf_path) {
         this->domain = domain;
-        load_bot_root_certificate(cert_path);
+        load_configuration(conf_path);
+        load_bot_root_certificate();
     }
 
     ~Server();
