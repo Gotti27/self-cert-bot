@@ -18,7 +18,9 @@ private:
         std::string ca_key_path;
     } conf = {};
 
+    void load_bot_root_certificate();
     void load_configuration(const std::string &configuration_path);
+
 public:
     explicit Server(const std::string& domain, const std::string& conf_path) {
         this->domain = domain;
