@@ -3,6 +3,9 @@
 //
 
 #include "self-cert-bot/Server.h"
+
+#include <fstream>
+
 #include "self-cert-bot/utils.h"
 #include <netdb.h>
 #include <unistd.h>
@@ -10,6 +13,7 @@
 #include <iostream>
 #include <thread>
 #include <openssl/pem.h>
+#include <nlohmann/json.hpp>
 
 namespace certbot {
     void thread_body(const int clientSocket, const sockaddr_in &clientAddress) {
@@ -58,9 +62,16 @@ namespace certbot {
         }
     }
 
-    void Server::load_bot_root_certificate(const std::string &cert_path) {
+    void Server::load_configuration(const std::string &configuration_path) {
+        std::ifstream json_file(configuration_path);
+        nlohmann::json data = nlohmann::json::parse(json_file);
+        conf.ca_cert_path = data["ca_cert_path"].get<std::string>();
+        conf.ca_key_path = data["ca_key_path"].get<std::string>();
+    }
+
+    void Server::load_bot_root_certificate() {
         root_cert = X509_new();
-        FILE* bio_cert = fopen(cert_path.c_str(), "rb");
+        FILE *bio_cert = fopen(conf.ca_cert_path.c_str(), "rb");
         PEM_read_X509(bio_cert, &root_cert, nullptr, nullptr);
 
         fclose(bio_cert);
@@ -69,7 +80,7 @@ namespace certbot {
             exit(EXIT_FAILURE);
         }
 
-        if (const X509_NAME* subject = X509_get_issuer_name(root_cert)) {
+        if (const X509_NAME *subject = X509_get_issuer_name(root_cert)) {
             char buffer[256];
             const auto entry = X509_NAME_get_entry(subject, 3);
 
@@ -82,7 +93,7 @@ namespace certbot {
         }
         // BIO_free(bio_cert);
 
-        this->root_cert;
+        // this->root_cert;
     }
 
     Server::~Server() {

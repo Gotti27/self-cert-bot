@@ -28,8 +28,8 @@ int main(const int argc, char *argv[]) {
         const auto client = certbot::Client("test.com");
         client.start();
     } else if (mode == "server") {
-        const std::string cert_path = argv[3];
-        const auto server = certbot::Server(domain, cert_path);
+        const std::string configuration_path = argv[3];
+        auto server = certbot::Server(domain, configuration_path);
         server.start();
     }
 
