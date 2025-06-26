@@ -11,4 +11,6 @@ std::string generate_random_string(int len);
 
 addrinfo* resolve_domain(const std::string &domain);
 
+int setup_socket_client();
+
 #endif //UTILS_H

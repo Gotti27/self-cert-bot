@@ -5,7 +5,10 @@
 #include "self-cert-bot/utils.h"
 
 #include <iostream>
+#include <unistd.h>
 #include <arpa/inet.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <openssl/rand.h>
 
 std::string generate_random_string(const int len) {
@@ -41,4 +44,20 @@ addrinfo *resolve_domain(const std::string &domain) {
     }
 
     return result;
+}
+
+int setup_socket_client() {
+    const int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in serverAddress{};
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(8080);
+    serverAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // inet_addr("127.0.0.1");
+
+    if (const int status = connect(clientSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress))) {
+        std::cerr << "Failed to connect " << status << std::endl;
+        close(clientSocket);
+        return 1;
+    }
+
+    return clientSocket;
 }
