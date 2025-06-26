@@ -15,7 +15,7 @@
 namespace certbot {
     void Client::start() const {
         const int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-        std::cout << "server domain" << domain << std::endl;
+        std::cout << "server domain " << domain << std::endl;
 
         sockaddr_in serverAddress{};
         serverAddress.sin_family = AF_INET;
