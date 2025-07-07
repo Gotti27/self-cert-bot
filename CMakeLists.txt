@@ -7,7 +7,6 @@ add_library(self_cert_lib
         src/client/Client.cpp
         src/server/Server.cpp
         src/utils/utils.cpp
-        src/utils/protocol.cpp
 )
 
 target_include_directories(self_cert_lib PUBLIC include)
