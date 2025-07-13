@@ -27,7 +27,7 @@ int main(const int argc, char *argv[]) {
     const std::string domain = argv[1];
 
     if (const std::string mode = argv[2]; mode == "client") {
-        const auto client = certbot::Client("test.com");
+        const auto client = certbot::Client("google.com", 14024);
         client.start();
     } else if (mode == "server") {
         const std::string configuration_path = argv[3];
