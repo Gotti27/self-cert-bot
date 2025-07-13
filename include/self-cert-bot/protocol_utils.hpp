@@ -4,6 +4,8 @@
 
 #ifndef PROTOCOL_UTILS_H
 #define PROTOCOL_UTILS_H
+
+#include <cstring>
 #include <optional>
 #include <vector>
 #include <openssl/ssl.h>
