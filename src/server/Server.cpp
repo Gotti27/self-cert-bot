@@ -17,6 +17,8 @@
 #include <openssl/ssl.h>
 #include <nlohmann/json.hpp>
 
+#include "self-cert-bot/protocol_utils.hpp"
+
 namespace certbot {
     void thread_body(const int clientSocket, const sockaddr_in &clientAddress, SSL_CTX *ctx) {
         bool flag = true;
@@ -34,20 +36,32 @@ namespace certbot {
 
         const char *connected_ip = inet_ntoa(clientAddress.sin_addr);
 
-        while (flag) {
-            char buffer[1024] = {};
+        std::vector<char> domainVector = receiveSocketMessage(ssl).value();
+        const std::string domain(domainVector.begin(), domainVector.end());
 
-            if (const int bytes = SSL_read(ssl, buffer, sizeof(buffer) - 1); bytes > 0) {
-                buffer[bytes] = '\0';
-                std::cout << "Message from " << connected_ip << "--" << clientSocket << ": " << buffer << std::endl;
+        std::cout << "requested domain " << domain << std::endl;
 
-                if (strcmp(buffer, "exit") == 0) {
-                    flag = false;
-                }
-            } else {
-                ERR_print_errors_fp(stderr);
-            }
+        const std::string challenge = generate_random_string(24);
+        sendSocketMessage(ssl, challenge);
+
+        std::cout << "challenge sent " << challenge << ", size: " << challenge.size() << std::endl;
+
+        unsigned short port;
+        std::memcpy(&port, receiveSocketMessage(ssl).value().data(), sizeof(unsigned short));
+
+        std::cout << "port: " << port << std::endl;
+
+        addrinfo *result = resolve_domain(domain);
+
+        for (const addrinfo *p = result; p != nullptr; p = p->ai_next) {
+            char ipStr[INET_ADDRSTRLEN];
+            const sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
+
+            inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
+            std::cout << ipStr << std::endl;
         }
+
+        freeaddrinfo(result);
 
         SSL_shutdown(ssl);
         SSL_free(ssl);
@@ -120,6 +134,7 @@ namespace certbot {
 
     Server::~Server() {
         X509_free(this->root_cert);
+        SSL_CTX_free(ctx);
     }
 
     void Server::start() {
@@ -140,7 +155,6 @@ namespace certbot {
         std::cout << generate_random_string(64) << std::endl;
 
         serverBody(serverSocket, ctx);
-        // SSL_CTX_free(ctx);
     }
 
     void Server::configure_SSL_context() {

@@ -11,10 +11,12 @@ namespace certbot {
 class Client {
 private:
     std::string domain;
+    unsigned short challengePort;
 
 public:
-    explicit Client(const std::string &domain) {
+    explicit Client(const std::string &domain, const unsigned short challengePort) {
         this->domain = domain;
+        this->challengePort = challengePort;
     }
 
     void start() const;
