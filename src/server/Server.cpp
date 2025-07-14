@@ -138,6 +138,7 @@ namespace certbot {
     }
 
     void Server::start() {
+        /*
         addrinfo *result = resolve_domain(domain);
 
         for (const addrinfo *p = result; p != nullptr; p = p->ai_next) {
@@ -149,6 +150,7 @@ namespace certbot {
         }
 
         freeaddrinfo(result);
+        */
 
         const int serverSocket = configureServer();
         configure_SSL_context();
