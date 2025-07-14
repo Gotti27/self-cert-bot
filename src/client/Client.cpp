@@ -4,6 +4,7 @@
 
 #include "self-cert-bot/Client.h"
 
+#include <fstream>
 #include <iostream>
 #include <ostream>
 #include <unistd.h>
@@ -13,13 +14,21 @@
 #include <openssl/ssl.h>
 #include <openssl/types.h>
 #include <sys/socket.h>
+#include <nlohmann/json.hpp>
 
 #include "self-cert-bot/protocol_utils.hpp"
 #include "self-cert-bot/utils.h"
 
 namespace certbot {
+    void Client::load_configuration(const std::string &configuration_path) {
+        std::ifstream json_file(configuration_path);
+        nlohmann::json data = nlohmann::json::parse(json_file);
+        conf.domain = data["domain"].get<std::string>();
+        conf.challengePort = data["port"].get<unsigned short>();
+    }
+
     void Client::start() const {
-        std::cout << "server domain " << domain << ", size " << domain.size() << std::endl;
+        std::cout << "server domain " << conf.domain << ", size " << conf.domain.size() << std::endl;
 
         const SSL_METHOD* method = TLS_client_method();
         SSL_CTX *ctx = SSL_CTX_new(method);
@@ -40,7 +49,7 @@ namespace certbot {
             ERR_print_errors_fp(stderr);
         }
 
-        sendSocketMessage(ssl, this->domain);
+        sendSocketMessage(ssl, conf.domain);
 
         if (const auto monad_challenge = receiveSocketMessage(ssl); !monad_challenge.has_value()) {
             std::cerr << "error while receiving the challenge\n";
@@ -50,7 +59,7 @@ namespace certbot {
             std::cout << "challenge received " << challenge << std::endl;
         }
 
-        sendSocketMessage(ssl, this->challengePort);
+        sendSocketMessage(ssl, conf.challengePort);
 
         SSL_shutdown(ssl);
         SSL_free(ssl);

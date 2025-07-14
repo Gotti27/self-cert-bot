@@ -10,13 +10,15 @@ namespace certbot {
 
 class Client {
 private:
-    std::string domain;
-    unsigned short challengePort;
+    struct clientConfiguration {
+        std::string domain;
+        unsigned short challengePort;
+    } conf = {};
+    void load_configuration(const std::string& configuration_path);
 
 public:
-    explicit Client(const std::string &domain, const unsigned short challengePort) {
-        this->domain = domain;
-        this->challengePort = challengePort;
+    explicit Client(const std::string& conf_path) {
+        load_configuration(conf_path);
     }
 
     void start() const;
