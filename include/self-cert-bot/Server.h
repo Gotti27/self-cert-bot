@@ -11,7 +11,6 @@ namespace certbot {
 
 class Server {
 private:
-    std::string domain;
     X509 *root_cert = nullptr;
     SSL_CTX *ctx = nullptr;
     struct serverConfiguration {
@@ -25,8 +24,7 @@ private:
     void configure_SSL_context();
 
 public:
-    explicit Server(const std::string& domain, const std::string& conf_path) {
-        this->domain = domain;
+    explicit Server(const std::string& conf_path) {
         load_configuration(conf_path);
         load_bot_root_certificate();
     }

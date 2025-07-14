@@ -16,24 +16,20 @@ int main(const int argc, char *argv[]) {
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
 
-    for (int i = 0; i < argc; i++) {
-        std::cout << argv[i] << std::endl;
-    }
-
-    if (argc < 3) {
+    if (argc < 2) {
         exit(EXIT_FAILURE);
     }
 
-    const std::string domain = argv[1];
-
-    if (const std::string mode = argv[2]; mode == "client") {
-        const auto client = certbot::Client("google.com", 14024);
+    const std::string configuration_path = argv[2];
+    if (const std::string mode = argv[1]; mode == "client") {
+        const auto client = certbot::Client(configuration_path);
         client.start();
     } else if (mode == "server") {
-        const std::string configuration_path = argv[3];
-        auto server = certbot::Server(domain, configuration_path);
+        auto server = certbot::Server(configuration_path);
         server.start();
+    } else {
+        throw std::invalid_argument("Unsupported mode");
     }
 
-    exit(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
