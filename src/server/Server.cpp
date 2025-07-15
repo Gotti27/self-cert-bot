@@ -53,12 +53,41 @@ namespace certbot {
 
         addrinfo *result = resolve_domain(domain);
 
+        const sockaddr_in *ipv4 = nullptr;
         for (const addrinfo *p = result; p != nullptr; p = p->ai_next) {
             char ipStr[INET_ADDRSTRLEN];
-            const sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
+            // const sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
+            ipv4 = reinterpret_cast<sockaddr_in *>(p->ai_addr);
 
             inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
             std::cout << ipStr << std::endl;
+            break;
+        }
+
+        if (ipv4 == nullptr) return;
+
+        const int clientChallengeSocket = socket(AF_INET, SOCK_STREAM, 0);
+        sockaddr_in serverAddress{};
+        serverAddress.sin_family = AF_INET;
+        serverAddress.sin_port = htons(port);
+        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1"); //  ipv4->sin_addr.s_addr;
+
+        if (const int status = connect(clientChallengeSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress))) {
+            std::cerr << "Failed to connect " << status << std::endl;
+            close(clientChallengeSocket);
+            return;
+        }
+
+        char buffer[24];
+        recv(clientChallengeSocket, buffer, 24, 0);
+        close(clientChallengeSocket);
+        std::cout << "received challenge " << buffer << std::endl;
+
+        const bool isChallengeCorrect = challenge == std::string(buffer);
+
+        if (isChallengeCorrect) {
+            std::cout << "Challenge matches" << std::endl;
+            // TODO: issue certificate
         }
 
         freeaddrinfo(result);
