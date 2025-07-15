@@ -50,16 +50,38 @@ namespace certbot {
         }
 
         sendSocketMessage(ssl, conf.domain);
-
+        std::string challenge;
         if (const auto monad_challenge = receiveSocketMessage(ssl); !monad_challenge.has_value()) {
             std::cerr << "error while receiving the challenge\n";
             exit(EXIT_FAILURE);
         } else {
-            const std::string challenge(monad_challenge.value().data());
+            challenge = monad_challenge.value().data();
             std::cout << "challenge received " << challenge << std::endl;
         }
 
         sendSocketMessage(ssl, conf.challengePort);
+
+        const int challengeSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+        sockaddr_in serverAddress{};
+        serverAddress.sin_family = AF_INET;
+        serverAddress.sin_port = htons(conf.challengePort);
+        serverAddress.sin_addr.s_addr = htonl(INADDR_ANY); // inet_addr("127.0.0.1");
+
+        const int bind_result = bind(challengeSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress));
+        std::cout << "bind_result " << bind_result << std::endl;
+
+        listen(challengeSocket, 1);
+        std::cout << "Server listening" << std::endl;
+        sockaddr_in clientAddress = {};
+        socklen_t clientAddressLength = sizeof clientAddress;
+        const int respondSocket = accept(challengeSocket,
+                                        reinterpret_cast<struct sockaddr *>(&clientAddress),
+                                        &clientAddressLength);
+
+        send(respondSocket, challenge.c_str(), challenge.size(), 0);
+        close(respondSocket);
+        close(challengeSocket);
 
         SSL_shutdown(ssl);
         SSL_free(ssl);

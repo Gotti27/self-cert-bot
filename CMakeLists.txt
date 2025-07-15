@@ -26,6 +26,6 @@ target_link_libraries(self_cert_lib
         nlohmann_json::nlohmann_json
 )
 
-add_executable(self_cert_bot src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp)
 
-target_link_libraries(self_cert_bot self_cert_lib)
+target_link_libraries(${PROJECT_NAME} self_cert_lib)
