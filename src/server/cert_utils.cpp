@@ -11,7 +11,6 @@
 #include <openssl/pem.h>
 #include <random>
 #include <vector>
-#include <ranges>
 #include <openssl/err.h>
 
 EVP_PKEY* generate_keypair() {
@@ -51,11 +50,9 @@ X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_
 
 
     std::string country = "Country";
-    unsigned char buffer[country.length()];
-    std::ranges::copy(country, buffer);
 
     // FIXME: update with real input data
-    X509_NAME_add_entry_by_txt(subj, "C", MBSTRING_ASC, buffer, -1, -1, 0);
+    X509_NAME_add_entry_by_txt(subj, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(country.c_str()), -1, -1, 0);
     X509_NAME_add_entry_by_txt(subj, "O", MBSTRING_ASC, (unsigned char *)("Organization"), -1, -1, 0);
     X509_NAME_add_entry_by_txt(subj, "CN", MBSTRING_ASC, (unsigned char *)("CommonName"), -1, -1, 0);
     X509_set_subject_name(cert, subj);
