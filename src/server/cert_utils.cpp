@@ -12,7 +12,8 @@
 #include <sstream>
 #include <openssl/pem.h>
 #include <random>
-#include <bits/ranges_algobase.h>
+#include <openssl/err.h>
+// #include <bits/ranges_algobase.h>
 
 // #define CHILD_CERT_FILE  "child_cert.pem"
 // #define CHILD_KEY_FILE  "child_key.pem"
@@ -98,24 +99,49 @@ int craft_certificate(const std::string& ca_cert_file_path, const std::string& c
     EVP_PKEY* ca_pkey = PEM_read_PrivateKey(ca_key_file, nullptr, nullptr, passkey.data());
     fclose(ca_cert_file);
     fclose(ca_key_file);
+std::string X509ToPEMString(const X509* cert) {
+    BIO* bio = BIO_new(BIO_s_mem());
+    if (!bio) return "";
 
     if (!ca_cert || !ca_pkey) {
         std::cerr << "Failed to read CA certificate or key" << std::endl;
         return 1;
+    if (!PEM_write_bio_X509(bio, cert)) {
+        BIO_free(bio);
+        return "";
     }
 
     EVP_PKEY* child_pkey = generate_keypair();
     X509* child_cert = generate_child_certificate(child_pkey, ca_cert, ca_pkey);
+    char* data;
+    const long len = BIO_get_mem_data(bio, &data);
+    std::string pemString(data, len);
 
     // save_certificate(child_cert, CHILD_CERT_FILE);
     // save_key(child_pkey, CHILD_KEY_FILE);
+    BIO_free(bio);
+    return pemString;
+}
+
+std::vector<unsigned char> serializeX509ToDER(const X509* cert) {
+    std::vector<unsigned char> der;
+    if (!cert) return der;
 
     std::cout << "Child certificate generated" << std::endl;
+    const int len = i2d_X509(cert, nullptr);
+    if (len <= 0) {
+        ERR_print_errors_fp(stderr);
+        return der;
+    }
 
     EVP_PKEY_free(ca_pkey);
     X509_free(ca_cert);
     EVP_PKEY_free(child_pkey);
     X509_free(child_cert);
+    der.resize(len);
+    unsigned char* p = der.data();
+    i2d_X509(cert, &p);
 
     return 0;
+    return der;
 }

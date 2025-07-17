@@ -16,5 +16,8 @@ void save_certificate(const X509* cert, std::string filename);
 void save_key(const EVP_PKEY* pkey, std::string filename);
 
 int craft_certificate(const std::string& ca_cert_file_path, const std::string& ca_key_file_path, const std::string& ca_key_pass_file_path);
+std::string X509ToPEMString(const X509* cert);
+
+std::vector<unsigned char> serializeX509ToDER(const X509* cert);
 
 #endif //CERT_UTILS_H
