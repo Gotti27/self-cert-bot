@@ -8,15 +8,10 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <iostream>
-#include <thread>
-#include <sstream>
 #include <openssl/pem.h>
 #include <random>
-#include <bits/ranges_algobase.h>
-
-// #define CHILD_CERT_FILE  "child_cert.pem"
-// #define CHILD_KEY_FILE  "child_key.pem"
-
+#include <vector>
+#include <openssl/err.h>
 
 EVP_PKEY* generate_keypair() {
     EVP_PKEY *pkey = nullptr;
@@ -55,11 +50,9 @@ X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_
 
 
     std::string country = "Country";
-    unsigned char buffer[country.length()];
-    std::ranges::copy(country, buffer);
 
     // FIXME: update with real input data
-    X509_NAME_add_entry_by_txt(subj, "C", MBSTRING_ASC, buffer, -1, -1, 0);
+    X509_NAME_add_entry_by_txt(subj, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(country.c_str()), -1, -1, 0);
     X509_NAME_add_entry_by_txt(subj, "O", MBSTRING_ASC, (unsigned char *)("Organization"), -1, -1, 0);
     X509_NAME_add_entry_by_txt(subj, "CN", MBSTRING_ASC, (unsigned char *)("CommonName"), -1, -1, 0);
     X509_set_subject_name(cert, subj);
@@ -81,41 +74,50 @@ void save_key(const EVP_PKEY* pkey, const char* filename) {
     fclose(file);
 }
 
-int craft_certificate(const std::string& ca_cert_file_path, const std::string& ca_key_file_path, const std::string& ca_key_pass_file_path) {
-    FILE* ca_cert_file = fopen(ca_cert_file_path.c_str(), "r");
-    FILE* ca_key_file = fopen(ca_key_file_path.c_str(), "r");
-    if (!ca_cert_file || !ca_key_file) {
-        std::cerr << "Error loading CA files." << std::endl;
-        return 1;
+int craft_certificate(const X509* ca_cert, EVP_PKEY* ca_pkey, std::string& passkey, X509*& child_cert, EVP_PKEY*& child_pkey) {
+    child_pkey = generate_keypair();
+    child_cert = generate_child_certificate(child_pkey, ca_cert, ca_pkey);
+
+    const bool failure = child_cert == nullptr || child_pkey == nullptr;
+
+    if (!failure) {
+        // TODO: remove this log
+        std::cout << "child certificate generated\n";
     }
 
-    std::ifstream passkey_file(ca_key_pass_file_path);
-    std::stringstream buffer;
-    buffer << passkey_file.rdbuf();
-    std::string passkey = buffer.str();
+    return failure;
+}
 
-    X509* ca_cert = PEM_read_X509(ca_cert_file, nullptr, nullptr, nullptr);
-    EVP_PKEY* ca_pkey = PEM_read_PrivateKey(ca_key_file, nullptr, nullptr, passkey.data());
-    fclose(ca_cert_file);
-    fclose(ca_key_file);
+std::string X509ToPEMString(const X509* cert) {
+    BIO* bio = BIO_new(BIO_s_mem());
+    if (!bio) return "";
 
-    if (!ca_cert || !ca_pkey) {
-        std::cerr << "Failed to read CA certificate or key" << std::endl;
-        return 1;
+    if (!PEM_write_bio_X509(bio, cert)) {
+        BIO_free(bio);
+        return "";
     }
 
-    EVP_PKEY* child_pkey = generate_keypair();
-    X509* child_cert = generate_child_certificate(child_pkey, ca_cert, ca_pkey);
+    char* data;
+    const long len = BIO_get_mem_data(bio, &data);
+    std::string pemString(data, len);
 
-    // save_certificate(child_cert, CHILD_CERT_FILE);
-    // save_key(child_pkey, CHILD_KEY_FILE);
+    BIO_free(bio);
+    return pemString;
+}
 
-    std::cout << "Child certificate generated" << std::endl;
+std::vector<unsigned char> serializeX509ToDER(const X509* cert) {
+    std::vector<unsigned char> der;
+    if (!cert) return der;
 
-    EVP_PKEY_free(ca_pkey);
-    X509_free(ca_cert);
-    EVP_PKEY_free(child_pkey);
-    X509_free(child_cert);
+    const int len = i2d_X509(cert, nullptr);
+    if (len <= 0) {
+        ERR_print_errors_fp(stderr);
+        return der;
+    }
 
-    return 0;
+    der.resize(len);
+    unsigned char* p = der.data();
+    i2d_X509(cert, &p);
+
+    return der;
 }

@@ -11,7 +11,9 @@ namespace certbot {
 
 class Server {
 private:
-    X509 *root_cert = nullptr;
+    X509 *ca_cert = nullptr;
+    EVP_PKEY* ca_pkey = nullptr;
+    std::string ca_passkey;
     SSL_CTX *ctx = nullptr;
     struct serverConfiguration {
         std::string ca_cert_path;

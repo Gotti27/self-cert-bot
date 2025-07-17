@@ -17,11 +17,14 @@
 #include <openssl/ssl.h>
 #include <nlohmann/json.hpp>
 
+#include "self-cert-bot/cert_utils.h"
 #include "self-cert-bot/protocol_utils.hpp"
 
 namespace certbot {
-    void thread_body(const int clientSocket, const sockaddr_in &clientAddress, SSL_CTX *ctx) {
-        bool flag = true;
+
+    void thread_body(const int clientSocket, const sockaddr_in &clientAddress, SSL_CTX *ctx,
+        const X509* ca_cert, EVP_PKEY* ca_pkey, const char* ca_passkey
+    ) {
         SSL *ssl = SSL_new(ctx);
 
         if (SSL_set_fd(ssl, clientSocket) == 0) {
@@ -87,7 +90,15 @@ namespace certbot {
 
         if (isChallengeCorrect) {
             std::cout << "Challenge matches" << std::endl;
-            // TODO: issue certificate
+            X509* child_cert = nullptr;
+            EVP_PKEY* child_pkey = nullptr;
+            auto ca_passkey_str = std::string(ca_passkey);
+
+            craft_certificate(ca_cert, ca_pkey, ca_passkey_str, child_cert, child_pkey);
+
+            const std::vector<unsigned char> serializedCert = serializeX509ToDER(child_cert);
+
+            sendSocketMessageRaw(ssl, serializedCert);
         }
 
         freeaddrinfo(result);
@@ -113,7 +124,9 @@ namespace certbot {
         return serverSocket;
     }
 
-    [[noreturn]] void serverBody(const int serverSocket, SSL_CTX *ctx) {
+    [[noreturn]] void serverBody(const int serverSocket, SSL_CTX *ctx,
+        const X509* ca_cert, EVP_PKEY* ca_pkey, std::string passkey
+    ) {
         while (true) {
             sockaddr_in clientAddress = {};
             socklen_t clientAddressLength = sizeof clientAddress;
@@ -121,7 +134,9 @@ namespace certbot {
                                             reinterpret_cast<struct sockaddr *>(&clientAddress),
                                             &clientAddressLength);
 
-            auto thread = std::thread(thread_body, clientSocket, clientAddress, ctx);
+            auto thread = std::thread(thread_body, clientSocket, clientAddress, ctx,
+                ca_cert, ca_pkey, passkey.c_str()
+            );
             thread.detach();
         }
     }
@@ -135,17 +150,34 @@ namespace certbot {
     }
 
     void Server::load_bot_root_certificate() {
-        root_cert = X509_new();
         FILE *bio_cert = fopen(conf.ca_cert_path.c_str(), "rb");
-        PEM_read_X509(bio_cert, &root_cert, nullptr, nullptr);
+        FILE *bio_pkey = fopen(conf.ca_key_path.c_str(), "rb");
+
+        if (!bio_cert || !bio_pkey) {
+            std::cerr << "Error loading CA files." << std::endl;
+            return;
+        }
+
+        ca_cert = nullptr;
+        ca_pkey = nullptr;
+
+        std::ifstream passkey_file(conf.ca_passkey_path);
+        std::stringstream buffer;
+        buffer << passkey_file.rdbuf();
+        ca_passkey = buffer.str();
+
+        PEM_read_PrivateKey(bio_pkey, &ca_pkey, nullptr, ca_passkey.data());
+        PEM_read_X509(bio_cert, &ca_cert, nullptr, nullptr);
 
         fclose(bio_cert);
-        if (!root_cert) {
+        fclose(bio_pkey);
+        if (!ca_cert || !ca_pkey) {
             std::cerr << "Error reading certificate!" << std::endl;
             exit(EXIT_FAILURE);
         }
 
-        if (const X509_NAME *subject = X509_get_issuer_name(root_cert)) {
+        /*
+        if (const X509_NAME *subject = X509_get_issuer_name(ca_cert)) {
             char buffer[256];
             const auto entry = X509_NAME_get_entry(subject, 3);
 
@@ -156,14 +188,17 @@ namespace certbot {
         } else {
             std::cerr << "Failed to get subject name!" << std::endl;
         }
+        */
+
         // BIO_free(bio_cert);
 
         // this->root_cert;
     }
 
     Server::~Server() {
-        X509_free(this->root_cert);
         SSL_CTX_free(ctx);
+        X509_free(this->ca_cert);
+        EVP_PKEY_free(ca_pkey);
     }
 
     void Server::start() {
@@ -185,7 +220,7 @@ namespace certbot {
         configure_SSL_context();
         std::cout << generate_random_string(64) << std::endl;
 
-        serverBody(serverSocket, ctx);
+        serverBody(serverSocket, ctx, ca_cert, ca_pkey, ca_passkey);
     }
 
     void Server::configure_SSL_context() {
@@ -203,12 +238,7 @@ namespace certbot {
             return len;
         });
 
-        std::ifstream passkey_file(conf.ca_passkey_path);
-        std::stringstream buffer;
-        buffer << passkey_file.rdbuf();
-        std::string passkey = buffer.str();
-
-        SSL_CTX_set_default_passwd_cb_userdata(ctx, (void *) passkey.c_str());
+        SSL_CTX_set_default_passwd_cb_userdata(ctx, (void *) ca_passkey.c_str());
 
         if (
             SSL_CTX_use_certificate_file(ctx, conf.ca_cert_path.c_str(), SSL_FILETYPE_PEM) <= 0 ||

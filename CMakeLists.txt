@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 add_library(self_cert_lib
         src/client/Client.cpp
         src/server/Server.cpp
+        src/server/cert_utils.cpp
         src/utils/utils.cpp
 )
 
