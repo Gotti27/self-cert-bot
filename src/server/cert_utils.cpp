@@ -11,6 +11,7 @@
 #include <openssl/pem.h>
 #include <random>
 #include <vector>
+#include <ranges>
 #include <openssl/err.h>
 
 EVP_PKEY* generate_keypair() {
