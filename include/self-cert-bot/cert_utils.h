@@ -5,6 +5,7 @@
 #ifndef CERT_UTILS_H
 #define CERT_UTILS_H
 #include <string>
+#include <vector>
 #include <openssl/types.h>
 
 EVP_PKEY* generate_keypair();
