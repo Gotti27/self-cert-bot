@@ -32,7 +32,7 @@ namespace certbot {
         return buffer;
     }
 
-    inline int sendSocketMessageRaw(SSL* ssl, const std::vector<char>& payload) {
+    inline int sendSocketMessageRaw(SSL* ssl, const std::vector<unsigned char>& payload) {
         const auto payloadSize = static_cast<int32_t>(payload.size());
 
         if (const int ret_code = SSL_write(ssl, &payloadSize, sizeof(int32_t)); ret_code <= 0) {
@@ -48,14 +48,14 @@ namespace certbot {
 
     template<typename T>
     int sendSocketMessage(SSL* ssl, const T& payload) {
-        std::vector<char> buffer(sizeof(T));
+        std::vector<unsigned char> buffer(sizeof(T));
         std::memcpy(buffer.data(), &payload, sizeof(T));
 
         return sendSocketMessageRaw(ssl, buffer);
     }
 
     inline int sendSocketMessage(SSL* ssl, const std::string& payload) {
-        const std::vector buffer(payload.begin(), payload.end());
+        const std::vector<unsigned char> buffer(payload.begin(), payload.end());
 
         return sendSocketMessageRaw(ssl, buffer);
     }
