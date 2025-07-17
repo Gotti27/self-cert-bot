@@ -8,16 +8,10 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <iostream>
-#include <thread>
-#include <sstream>
 #include <openssl/pem.h>
 #include <random>
+#include <vector>
 #include <openssl/err.h>
-// #include <bits/ranges_algobase.h>
-
-// #define CHILD_CERT_FILE  "child_cert.pem"
-// #define CHILD_KEY_FILE  "child_key.pem"
-
 
 EVP_PKEY* generate_keypair() {
     EVP_PKEY *pkey = nullptr;
