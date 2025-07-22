@@ -8,6 +8,14 @@
 #include <vector>
 #include <openssl/types.h>
 
+typedef struct CertFieldsStruct {
+    std::string C;
+    std::string ST;
+    std::string O;
+    std::string OU;
+    std::string CN;
+} CertFields;
+
 EVP_PKEY* generate_keypair();
 
 X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_PKEY* ca_pkey);
