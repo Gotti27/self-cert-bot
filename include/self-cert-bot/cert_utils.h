@@ -30,4 +30,8 @@ std::string X509ToPEMString(const X509* cert);
 
 std::vector<unsigned char> serializeX509ToDER(const X509* cert);
 
+std::vector<unsigned char> serializePrivateKey(const EVP_PKEY* pkey);
+
+EVP_PKEY* deserializePrivateKey(const std::vector<unsigned char>& buffer);
+
 #endif //CERT_UTILS_H

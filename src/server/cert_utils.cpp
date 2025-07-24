@@ -121,3 +121,32 @@ std::vector<unsigned char> serializeX509ToDER(const X509* cert) {
     return der;
 }
 
+std::vector<unsigned char> serializePrivateKey(const EVP_PKEY* pkey) {
+    const int len = i2d_PrivateKey(pkey, nullptr);
+    if (len <= 0) {
+        throw std::runtime_error("Failed to get key length");
+    }
+
+    std::vector<unsigned char> buffer(len);
+    unsigned char* p = buffer.data();
+    if (i2d_PrivateKey(pkey, &p) <= 0) {
+        throw std::runtime_error("Failed to serialize private key");
+    }
+
+    return buffer;
+}
+
+
+EVP_PKEY* deserializePrivateKey(const std::vector<unsigned char>& buffer) {
+    if (buffer.empty()) {
+        throw std::runtime_error("Buffer is empty");
+    }
+
+    const unsigned char* p = buffer.data();
+    EVP_PKEY* pkey = d2i_PrivateKey(EVP_PKEY_RSA, nullptr, &p, buffer.size());
+    if (!pkey) {
+        throw std::runtime_error("Failed to deserialize private key");
+    }
+
+    return pkey;
+}
