@@ -8,6 +8,6 @@
 #include "self-cert-bot/utils.h"
 
 BOOST_AUTO_TEST_CASE(RandomStringLength) {
-    BOOST_CHECK(generate_random_string(12).size() == 12);
+    BOOST_CHECK(certbot::generate_random_string(12).size() == 12);
 }
 
