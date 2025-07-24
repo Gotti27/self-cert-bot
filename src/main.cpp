@@ -8,6 +8,7 @@
 
 #include "self-cert-bot/Client.h"
 #include "self-cert-bot/Server.h"
+#include "self-cert-bot/utils.h"
 
 #define BUF_SIZE 500
 
@@ -16,19 +17,18 @@ int main(const int argc, char *argv[]) {
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
 
-    if (argc < 2) {
-        exit(EXIT_FAILURE);
-    }
-
-    const std::string configuration_path = argv[2];
-    if (const std::string mode = argv[1]; mode == "client") {
-        const auto client = certbot::Client(configuration_path);
-        client.start();
-    } else if (mode == "server") {
-        auto server = certbot::Server(configuration_path);
-        server.start();
+    if (const auto [
+            mode, configPath,
+            interactive] = certbot::parseConfiguration(argc, argv);
+        mode == certbot::CLIENT) {
+        if (interactive) {
+            certbot::Client().start();
+        } else {
+            certbot::Client(configPath.value()).start();
+        }
+    } else if (mode == certbot::SERVER) {
+        certbot::Server(configPath.value()).start();
     } else {
-        throw std::invalid_argument("Unsupported mode");
     }
 
     return EXIT_SUCCESS;

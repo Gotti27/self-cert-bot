@@ -8,15 +8,23 @@
 #include <vector>
 #include <openssl/types.h>
 
+typedef struct CertFieldsStruct {
+    std::string C;
+    std::string ST;
+    std::string O;
+    std::string OU;
+    std::string CN;
+} CertFields;
+
 EVP_PKEY* generate_keypair();
 
-X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_PKEY* ca_pkey);
+X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_PKEY* ca_pkey, const CertFields& cert_fields);
 
 void save_certificate(const X509* cert, const char* filename);
 
 void save_key(const EVP_PKEY* pkey, const char* filename);
 
-int craft_certificate(const X509* ca_cert, EVP_PKEY* ca_pkey, std::string& passkey, X509*& child_cert, EVP_PKEY*& child_pkey);
+int craft_certificate(const X509* ca_cert, EVP_PKEY* ca_pkey, X509*& child_cert, EVP_PKEY*& child_pkey, const CertFields& cert_fields);
 
 std::string X509ToPEMString(const X509* cert);
 

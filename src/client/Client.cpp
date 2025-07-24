@@ -26,6 +26,42 @@ namespace certbot {
         nlohmann::json data = nlohmann::json::parse(json_file);
         conf.domain = data["domain"].get<std::string>();
         conf.challengePort = data["port"].get<unsigned short>();
+        conf.C = data["C"].get<std::string>();
+        conf.ST = data["ST"].get<std::string>();
+        conf.O = data["O"].get<std::string>();
+        conf.OU = data["OU"].get<std::string>();
+    }
+
+    Client::Client(const std::string &conf_path) {
+        load_configuration(conf_path);
+    }
+
+    Client::Client() {
+        std::string domain, country, state, organization, organizationUnit;
+        unsigned short port;
+
+        std::cout << "Domain: ";
+        std::cin >> domain;
+        std::cout << "Challenge port: ";
+        std::cin >> port;
+        if (!std::cin.good()) {
+            throw std::runtime_error("port is not a number");
+        }
+        std::cout << "Country: ";
+        std::cin >> country;
+        std::cout << "State: ";
+        std::cin >> state;
+        std::cout << "Organization: ";
+        std::cin >> organization;
+        std::cout << "Organization Unit: ";
+        std::cin >> organizationUnit;
+
+        conf.domain = domain;
+        conf.challengePort = port;
+        conf.C = country;
+        conf.ST = state;
+        conf.O = organization;
+        conf.OU = organizationUnit;
     }
 
     void Client::start() const {
@@ -84,12 +120,17 @@ namespace certbot {
         close(respondSocket);
         close(challengeSocket);
 
+        const CertFields cert_fields = {conf.C, conf.ST, conf.O, conf.OU, conf.domain};
+
+        sendSocketMessage(ssl, cert_fields);
+
         std::vector<char> certBufferTemp = receiveSocketMessage(ssl).value();
         const auto certBuffer = std::vector<unsigned char>(certBufferTemp.begin(), certBufferTemp.end());
 
         const unsigned char* p = certBuffer.data();
         X509* cert = d2i_X509(nullptr, &p, certBuffer.size());
         std::cout << std::endl << X509ToPEMString(cert) << std::endl;
+
         X509_free(cert);
 
         SSL_shutdown(ssl);

@@ -4,12 +4,48 @@
 
 #include "self-cert-bot/utils.h"
 
+#include <filesystem>
 #include <iostream>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
+
+namespace certbot {
+
+CertBotSettings parseConfiguration(const int argc, char *argv[]) {
+    CertBotSettings settings;
+
+    for (int i = 0; i < argc; ++i) {
+        std::string opt = argv[i];
+
+        if (opt == "--interactive" || opt == "-i") {
+            settings.interactive = true;
+        }
+
+        if ((opt == "--mode" || opt == "-m") && ++i < argc) {
+            if (std::string mode(argv[i]); mode == "server") {
+                settings.mode = SERVER;
+            } else if (mode == "client") {
+                settings.mode = CLIENT;
+            } else {
+                throw std::invalid_argument("mode not supported");
+            }
+        }
+
+        if ((opt == "--config" || opt == "-c") && ++i < argc) {
+            std::string configPath(argv[i]);
+
+            if (!std::filesystem::exists(configPath)) {
+                throw std::invalid_argument("config path does not exist");
+            }
+
+            settings.configPath = configPath;
+        }
+    }
+
+    return settings;
+}
 
 std::string generate_random_string(const int len) {
     static constexpr char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -61,3 +97,5 @@ int setup_socket_client() {
 
     return clientSocket;
 }
+
+} // certbot
