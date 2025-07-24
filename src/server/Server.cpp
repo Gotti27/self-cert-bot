@@ -92,9 +92,11 @@ namespace certbot {
             std::cout << "Challenge matches" << std::endl;
             X509* child_cert = nullptr;
             EVP_PKEY* child_pkey = nullptr;
-            auto ca_passkey_str = std::string(ca_passkey);
 
-            craft_certificate(ca_cert, ca_pkey, ca_passkey_str, child_cert, child_pkey);
+            auto cert_fields_buffer = receiveSocketMessage(ssl).value();
+            const CertFields* p_obj = reinterpret_cast<CertFields*>(cert_fields_buffer.data());
+
+            craft_certificate(ca_cert, ca_pkey, child_cert, child_pkey, *p_obj);
 
             const std::vector<unsigned char> serializedCert = serializeX509ToDER(child_cert);
 

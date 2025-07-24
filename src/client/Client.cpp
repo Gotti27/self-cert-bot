@@ -120,12 +120,17 @@ namespace certbot {
         close(respondSocket);
         close(challengeSocket);
 
+        const CertFields cert_fields = {conf.C, conf.ST, conf.O, conf.OU, conf.domain};
+
+        sendSocketMessage(ssl, cert_fields);
+
         std::vector<char> certBufferTemp = receiveSocketMessage(ssl).value();
         const auto certBuffer = std::vector<unsigned char>(certBufferTemp.begin(), certBufferTemp.end());
 
         const unsigned char* p = certBuffer.data();
         X509* cert = d2i_X509(nullptr, &p, certBuffer.size());
         std::cout << std::endl << X509ToPEMString(cert) << std::endl;
+
         X509_free(cert);
 
         SSL_shutdown(ssl);
