@@ -33,7 +33,7 @@ EVP_PKEY* generate_keypair() {
     return pkey;
 }
 
-X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_PKEY* ca_pkey) {
+X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_PKEY* ca_pkey, const CertFields& cert_fields) {
     X509* cert = X509_new();
 
     std::default_random_engine generator;
@@ -48,13 +48,12 @@ X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_
     X509_set_issuer_name(cert, X509_get_subject_name(ca_cert));
     X509_NAME* subj = X509_NAME_new();
 
+    X509_NAME_add_entry_by_txt(subj, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(cert_fields.C.c_str()), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(subj, "ST", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(cert_fields.ST.data()), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(subj, "O", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(cert_fields.O.data()), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(subj, "OU", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(cert_fields.OU.data()), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(subj, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(cert_fields.CN.data()), -1, -1, 0);
 
-    std::string country = "Country";
-
-    // FIXME: update with real input data
-    X509_NAME_add_entry_by_txt(subj, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(country.c_str()), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(subj, "O", MBSTRING_ASC, (unsigned char *)("Organization"), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(subj, "CN", MBSTRING_ASC, (unsigned char *)("CommonName"), -1, -1, 0);
     X509_set_subject_name(cert, subj);
 
     X509_sign(cert, ca_pkey, EVP_sha256());
@@ -74,9 +73,9 @@ void save_key(const EVP_PKEY* pkey, const char* filename) {
     fclose(file);
 }
 
-int craft_certificate(const X509* ca_cert, EVP_PKEY* ca_pkey, std::string& passkey, X509*& child_cert, EVP_PKEY*& child_pkey) {
+int craft_certificate(const X509* ca_cert, EVP_PKEY* ca_pkey, X509*& child_cert, EVP_PKEY*& child_pkey, const CertFields& cert_fields) {
     child_pkey = generate_keypair();
-    child_cert = generate_child_certificate(child_pkey, ca_cert, ca_pkey);
+    child_cert = generate_child_certificate(child_pkey, ca_cert, ca_pkey, cert_fields);
 
     const bool failure = child_cert == nullptr || child_pkey == nullptr;
 
@@ -121,3 +120,4 @@ std::vector<unsigned char> serializeX509ToDER(const X509* cert) {
 
     return der;
 }
+
