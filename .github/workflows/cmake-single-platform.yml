@@ -23,9 +23,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install deps
-      run: |
-        sudo apt update && sudo apt install -y nlohmann-json3-dev libboost-all-dev
+    - uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: nlohmann-json3-dev libboost-all-dev
+        version: 1.0
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
