@@ -73,7 +73,7 @@ namespace certbot {
         sockaddr_in serverAddress{};
         serverAddress.sin_family = AF_INET;
         serverAddress.sin_port = htons(port);
-        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1"); //  ipv4->sin_addr.s_addr;
+        serverAddress.sin_addr.s_addr = ipv4->sin_addr.s_addr;
 
         if (const int status = connect(clientChallengeSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress))) {
             std::cerr << "Failed to connect " << status << std::endl;
