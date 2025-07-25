@@ -131,6 +131,10 @@ namespace certbot {
         X509* cert = d2i_X509(nullptr, &p, certBuffer.size());
         std::cout << std::endl << X509ToPEMString(cert) << std::endl;
 
+        const auto serialized_p_key = receiveSocketMessage(ssl).value();
+        EVP_PKEY* private_key = deserializePrivateKey(std::vector<unsigned char>(serialized_p_key.begin(), serialized_p_key.end()));
+
+        EVP_PKEY_free(private_key);
         X509_free(cert);
 
         SSL_shutdown(ssl);
