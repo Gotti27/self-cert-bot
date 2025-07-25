@@ -101,6 +101,12 @@ namespace certbot {
             const std::vector<unsigned char> serializedCert = serializeX509ToDER(child_cert);
 
             sendSocketMessageRaw(ssl, serializedCert);
+
+            const std::vector<unsigned char> serializedPrivateKey = serializePrivateKey(child_pkey);
+            sendSocketMessageRaw(ssl, serializedPrivateKey);
+
+            X509_free(child_cert);
+            EVP_PKEY_free(child_pkey);
         }
 
         freeaddrinfo(result);
