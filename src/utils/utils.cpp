@@ -31,6 +31,8 @@ CertBotSettings parseConfiguration(const int argc, char *argv[]) {
             } else {
                 throw std::invalid_argument("mode not supported");
             }
+        } else if (opt == "--mode" || opt == "-m") {
+            throw std::invalid_argument("mode not specified");
         }
 
         if ((opt == "--config" || opt == "-c") && ++i < argc) {
@@ -41,6 +43,8 @@ CertBotSettings parseConfiguration(const int argc, char *argv[]) {
             }
 
             settings.configPath = configPath;
+        } else if (opt == "--config" || opt == "-c") {
+            throw std::invalid_argument("config path not specified");
         }
     }
 
