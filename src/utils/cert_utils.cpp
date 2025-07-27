@@ -80,21 +80,12 @@ namespace certbot {
         fclose(file);
     }
 
-    int craft_certificate(const X509 *ca_cert, EVP_PKEY *ca_pkey, X509 *&child_cert, EVP_PKEY *&child_pkey,
-                          const CertFields &cert_fields) {
-        child_pkey = generate_keypair();
-
-        child_cert = generate_certificate(child_pkey, cert_fields);
+    X509 *craft_certificate(const X509 *ca_cert, EVP_PKEY *ca_pkey,
+                            EVP_PKEY *child_pkey, const CertFields &cert_fields) {
+        X509 *child_cert = generate_certificate(child_pkey, cert_fields);
         sign_child_certificate(ca_cert, ca_pkey, child_cert, child_pkey);
 
-        const bool failure = child_cert == nullptr || child_pkey == nullptr;
-
-        if (!failure) {
-            // TODO: remove this log
-            std::cout << "child certificate generated\n";
-        }
-
-        return failure;
+        return child_cert;
     }
 
     std::string X509ToPEMString(const X509 *cert) {
