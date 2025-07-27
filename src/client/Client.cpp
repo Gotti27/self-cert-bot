@@ -66,6 +66,7 @@ namespace certbot {
 
     void Client::start() const {
         std::cout << "server domain " << conf.domain << ", size " << conf.domain.size() << std::endl;
+        EVP_PKEY *pkey = generate_keypair();
 
         const SSL_METHOD* method = TLS_client_method();
         SSL_CTX *ctx = SSL_CTX_new(method);
@@ -124,6 +125,9 @@ namespace certbot {
 
         sendSocketMessage(ssl, cert_fields);
 
+        const std::vector<unsigned char> serializedPublicKey = serializePublicKey(pkey);
+        sendSocketMessageRaw(ssl, serializedPublicKey);
+
         std::vector<char> certBufferTemp = receiveSocketMessage(ssl).value();
         const auto certBuffer = std::vector<unsigned char>(certBufferTemp.begin(), certBufferTemp.end());
 
@@ -131,10 +135,7 @@ namespace certbot {
         X509* cert = d2i_X509(nullptr, &p, certBuffer.size());
         std::cout << std::endl << X509ToPEMString(cert) << std::endl;
 
-        const auto serialized_p_key = receiveSocketMessage(ssl).value();
-        EVP_PKEY* private_key = deserializePrivateKey(std::vector<unsigned char>(serialized_p_key.begin(), serialized_p_key.end()));
-
-        EVP_PKEY_free(private_key);
+        EVP_PKEY_free(pkey);
         X509_free(cert);
 
         SSL_shutdown(ssl);

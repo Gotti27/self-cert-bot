@@ -27,8 +27,8 @@ namespace certbot {
 
     void save_key(const EVP_PKEY *pkey, const char *filename);
 
-    int craft_certificate(const X509 *ca_cert, EVP_PKEY *ca_pkey, X509 *&child_cert, EVP_PKEY *&child_pkey,
-                          const CertFields &cert_fields);
+    X509 *craft_certificate(const X509 *ca_cert, EVP_PKEY *ca_pkey,
+                            EVP_PKEY *child_pkey, const CertFields &cert_fields);
 
     std::string X509ToPEMString(const X509 *cert);
 
@@ -37,5 +37,9 @@ namespace certbot {
     std::vector<unsigned char> serializePrivateKey(const EVP_PKEY *pkey);
 
     EVP_PKEY *deserializePrivateKey(const std::vector<unsigned char> &buffer);
+
+    std::vector<unsigned char> serializePublicKey(const EVP_PKEY *pkey);
+
+    EVP_PKEY *deserializePublicKey(const std::vector<unsigned char> &buffer);
 } // certbot
 #endif //CERT_UTILS_H

@@ -90,20 +90,18 @@ namespace certbot {
 
         if (isChallengeCorrect) {
             std::cout << "Challenge matches" << std::endl;
-            X509* child_cert = nullptr;
-            EVP_PKEY* child_pkey = nullptr;
 
             auto cert_fields_buffer = receiveSocketMessage(ssl).value();
             const CertFields* p_obj = reinterpret_cast<CertFields*>(cert_fields_buffer.data());
 
-            craft_certificate(ca_cert, ca_pkey, child_cert, child_pkey, *p_obj);
+            const auto serialized_p_key = receiveSocketMessage(ssl).value();
+            EVP_PKEY* child_pkey = deserializePublicKey(std::vector<unsigned char>(serialized_p_key.begin(), serialized_p_key.end()));
+
+            X509* child_cert = craft_certificate(ca_cert, ca_pkey, child_pkey, *p_obj);
 
             const std::vector<unsigned char> serializedCert = serializeX509ToDER(child_cert);
 
             sendSocketMessageRaw(ssl, serializedCert);
-
-            const std::vector<unsigned char> serializedPrivateKey = serializePrivateKey(child_pkey);
-            sendSocketMessageRaw(ssl, serializedPrivateKey);
 
             X509_free(child_cert);
             EVP_PKEY_free(child_pkey);
