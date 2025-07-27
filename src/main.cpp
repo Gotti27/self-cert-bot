@@ -10,25 +10,33 @@
 #include "self-cert-bot/Server.h"
 #include "self-cert-bot/utils.h"
 
-#define BUF_SIZE 500
+void startup_client(const certbot::CertBotSettings &settings) {
+    if (settings.interactive) {
+        certbot::Client().start();
+    } else {
+        certbot::Client(settings.configPath.value()).start();
+    }
+}
+
+void startup_server(const certbot::CertBotSettings &settings) {
+    certbot::Server(settings.configPath.value()).start();
+}
 
 int main(const int argc, char *argv[]) {
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
 
-    if (const auto [
-            mode, configPath,
-            interactive] = certbot::parseConfiguration(argc, argv);
-        mode == certbot::CLIENT) {
-        if (interactive) {
-            certbot::Client().start();
-        } else {
-            certbot::Client(configPath.value()).start();
-        }
-    } else if (mode == certbot::SERVER) {
-        certbot::Server(configPath.value()).start();
-    } else {
+    switch (const certbot::CertBotSettings settings = certbot::parseConfiguration(argc, argv); settings.mode.value()) {
+        case certbot::CLIENT:
+            startup_client(settings);
+            break;
+        case certbot::SERVER:
+            startup_server(settings);
+            break;
+        default:
+            std::cerr << "Invalid mode, exiting";
+            exit(EXIT_FAILURE);
     }
 
     return EXIT_SUCCESS;
