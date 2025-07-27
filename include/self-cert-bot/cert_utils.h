@@ -37,5 +37,9 @@ namespace certbot {
     std::vector<unsigned char> serializePrivateKey(const EVP_PKEY *pkey);
 
     EVP_PKEY *deserializePrivateKey(const std::vector<unsigned char> &buffer);
+
+    std::vector<unsigned char> serializePublicKey(const EVP_PKEY *pkey);
+
+    EVP_PKEY *deserializePublicKey(const std::vector<unsigned char> &buffer);
 } // certbot
 #endif //CERT_UTILS_H
