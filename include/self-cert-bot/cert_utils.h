@@ -18,7 +18,9 @@ typedef struct CertFieldsStruct {
 
 EVP_PKEY* generate_keypair();
 
-X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_PKEY* ca_pkey, const CertFields& cert_fields);
+X509* generate_certificate(EVP_PKEY* pkey, const CertFields& cert_fields);
+
+void sign_child_certificate(const X509* ca_cert, EVP_PKEY* ca_pkey, X509* child_cert, EVP_PKEY* child_pkey);
 
 void save_certificate(const X509* cert, const char* filename);
 

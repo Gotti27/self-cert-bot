@@ -33,21 +33,19 @@ EVP_PKEY* generate_keypair() {
     return pkey;
 }
 
-X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_PKEY* ca_pkey, const CertFields& cert_fields) {
+X509 *generate_certificate(EVP_PKEY *pkey, const CertFields &cert_fields) {
     X509* cert = X509_new();
 
     std::default_random_engine generator;
-    std::uniform_int_distribution<long> distribution(LONG_MIN,LONG_MAX);
+    std::uniform_int_distribution distribution(LONG_MIN,LONG_MAX);
 
     ASN1_INTEGER_set(X509_get_serialNumber(cert), distribution(generator));
     X509_gmtime_adj(X509_get_notBefore(cert), 0);
     X509_gmtime_adj(X509_get_notAfter(cert), 31536000L);
 
-    X509_set_pubkey(cert, child_pkey);
+    X509_set_pubkey(cert, pkey);
 
-    X509_set_issuer_name(cert, X509_get_subject_name(ca_cert));
     X509_NAME* subj = X509_NAME_new();
-
     X509_NAME_add_entry_by_txt(subj, "C", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(cert_fields.C.c_str()), -1, -1, 0);
     X509_NAME_add_entry_by_txt(subj, "ST", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(cert_fields.ST.data()), -1, -1, 0);
     X509_NAME_add_entry_by_txt(subj, "O", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(cert_fields.O.data()), -1, -1, 0);
@@ -56,9 +54,12 @@ X509* generate_child_certificate(EVP_PKEY* child_pkey, const X509* ca_cert, EVP_
 
     X509_set_subject_name(cert, subj);
 
-    X509_sign(cert, ca_pkey, EVP_sha256());
-
     return cert;
+}
+
+void sign_child_certificate(const X509 *ca_cert, EVP_PKEY *ca_pkey, X509 *child_cert, EVP_PKEY *child_pkey) {
+    X509_set_issuer_name(child_cert, X509_get_subject_name(ca_cert));
+    X509_sign(child_cert, ca_pkey, EVP_sha256());
 }
 
 void save_certificate(const X509* cert, const char* filename) {
@@ -75,7 +76,9 @@ void save_key(const EVP_PKEY* pkey, const char* filename) {
 
 int craft_certificate(const X509* ca_cert, EVP_PKEY* ca_pkey, X509*& child_cert, EVP_PKEY*& child_pkey, const CertFields& cert_fields) {
     child_pkey = generate_keypair();
-    child_cert = generate_child_certificate(child_pkey, ca_cert, ca_pkey, cert_fields);
+
+    child_cert = generate_certificate(child_pkey, cert_fields);
+    sign_child_certificate(ca_cert, ca_pkey, child_cert, child_pkey);
 
     const bool failure = child_cert == nullptr || child_pkey == nullptr;
 
