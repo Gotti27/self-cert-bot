@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_SUITE(generate_certificateTestSuite)
         X509 *cert = nullptr;
         BOOST_CHECK_NO_THROW(cert = certbot::generate_certificate(pkey, cert_fields));
         BOOST_CHECK(cert != nullptr);
-        BOOST_CHECK(EVP_PKEY_cmp(pkey, X509_get_pubkey(cert)) == 1);
+        BOOST_CHECK(EVP_PKEY_eq(pkey, X509_get_pubkey(cert)));
 
         EVP_PKEY_free(pkey);
         X509_free(cert);
