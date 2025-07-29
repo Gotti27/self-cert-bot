@@ -11,6 +11,8 @@ namespace certbot {
 
 class Client {
 private:
+    in_addr_t serverIp;
+    unsigned short serverPort;
     struct clientConfiguration {
         std::string domain;
         unsigned short challengePort;
