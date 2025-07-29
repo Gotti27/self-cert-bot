@@ -138,7 +138,6 @@ namespace certbot {
                                         &clientAddressLength);
 
         send(respondSocket, challenge.c_str(), challenge.size(), 0);
-        close(respondSocket);
         close(challengeSocket);
 
         const CertFields cert_fields = {conf.C, conf.ST, conf.O, conf.OU, conf.domain};
