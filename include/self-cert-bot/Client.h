@@ -5,6 +5,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 #include <filesystem>
+#include <netinet/in.h>
 #include <string>
 
 namespace certbot {
