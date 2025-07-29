@@ -38,13 +38,13 @@ namespace certbot {
         }
 
         const char *connected_ip = inet_ntoa(clientAddress.sin_addr);
+        std::cout << "New client connected: " << connected_ip << std::endl;
 
-        std::vector<char> domainVector = receiveSocketMessage(ssl).value();
-        const std::string domain(domainVector.begin(), domainVector.end());
+        const std::string domain(receiveSocketMessage(ssl).value().data());
 
         std::cout << "requested domain " << domain << std::endl;
 
-        const std::string challenge = generate_random_string(24);
+        const std::string challenge = generate_random_string(CHALLENGE_SIZE);
         sendSocketMessage(ssl, challenge);
 
         std::cout << "challenge sent " << challenge << ", size: " << challenge.size() << std::endl;
@@ -56,29 +56,30 @@ namespace certbot {
 
         addrinfo *result = resolve_domain(domain);
 
-        const sockaddr_in *ipv4 = nullptr;
-        for (const addrinfo *p = result; p != nullptr; p = p->ai_next) {
-            char ipStr[INET_ADDRSTRLEN];
-            // const sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
-            ipv4 = reinterpret_cast<sockaddr_in *>(p->ai_addr);
-
-            inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
-            std::cout << ipStr << std::endl;
-            break;
+        if (result == nullptr) {
+            // failed resolution
+            return;
         }
+
+        const sockaddr_in *ipv4 = nullptr;
+
+        char ipStr[INET_ADDRSTRLEN];
+        ipv4 = reinterpret_cast<sockaddr_in *>(result->ai_addr);
+
+        inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
+        std::cout << ipStr << std::endl;
 
         if (ipv4 == nullptr) return;
 
         const int clientChallengeSocket = setup_socket_client(ipv4->sin_addr.s_addr, port);
+        freeaddrinfo(result);
 
         char buffer[32] = {};
         recv(clientChallengeSocket, buffer, CHALLENGE_SIZE, 0);
         close(clientChallengeSocket);
         std::cout << "received challenge " << buffer << std::endl;
 
-        const bool isChallengeCorrect = challenge == std::string(buffer);
-
-        if (isChallengeCorrect) {
+        if (challenge == std::string(buffer)) {
             std::cout << "Challenge matches" << std::endl;
 
             auto cert_fields_buffer = receiveSocketMessage(ssl).value();
@@ -95,9 +96,10 @@ namespace certbot {
 
             X509_free(child_cert);
             EVP_PKEY_free(child_pkey);
+        } else {
+            // TODO: blacklist client
+            std::cout << "Challenge does not match" << std::endl;
         }
-
-        freeaddrinfo(result);
 
         SSL_shutdown(ssl);
         SSL_free(ssl);
@@ -172,24 +174,6 @@ namespace certbot {
             std::cerr << "Error reading certificate!" << std::endl;
             exit(EXIT_FAILURE);
         }
-
-        /*
-        if (const X509_NAME *subject = X509_get_issuer_name(ca_cert)) {
-            char buffer[256];
-            const auto entry = X509_NAME_get_entry(subject, 3);
-
-            const auto s = X509_NAME_ENTRY_get_data(entry);
-
-            X509_NAME_oneline(subject, buffer, sizeof(buffer));
-            std::cout << "Cert Subject: " << buffer << std::endl << s->data << std::endl;
-        } else {
-            std::cerr << "Failed to get subject name!" << std::endl;
-        }
-        */
-
-        // BIO_free(bio_cert);
-
-        // this->root_cert;
     }
 
     Server::~Server() {
@@ -199,20 +183,6 @@ namespace certbot {
     }
 
     void Server::start() {
-        /*
-        addrinfo *result = resolve_domain(domain);
-
-        for (const addrinfo *p = result; p != nullptr; p = p->ai_next) {
-            char ipStr[INET_ADDRSTRLEN];
-            const sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
-
-            inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
-            std::cout << ipStr << std::endl;
-        }
-
-        freeaddrinfo(result);
-        */
-
         const int serverSocket = configureServer(this->conf.port);
         configure_SSL_context();
         std::cout << generate_random_string(64) << std::endl;

@@ -26,7 +26,9 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE(resolve_domainTestSuite)
 
     BOOST_AUTO_TEST_CASE(DomainResolution) {
-        const addrinfo* addrinfo = certbot::resolve_domain("local.mostserene.eu");
+        const addrinfo *addrinfo = certbot::resolve_domain("local.mostserene.eu");
+
+        BOOST_CHECK(addrinfo != nullptr);
 
         char ipStr[INET_ADDRSTRLEN];
         const auto *ipv4 = reinterpret_cast<sockaddr_in *>(addrinfo->ai_addr);
@@ -34,6 +36,12 @@ BOOST_AUTO_TEST_SUITE(resolve_domainTestSuite)
         inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
 
         BOOST_CHECK(strcmp(ipStr, "127.0.0.1") == 0);
+    }
+
+    BOOST_AUTO_TEST_CASE(NonExistentDomainResolution) {
+        const addrinfo *addrinfo = certbot::resolve_domain("non-existent.mostserene.eu");
+
+        BOOST_CHECK(addrinfo == nullptr);
     }
 
 BOOST_AUTO_TEST_SUITE_END()
