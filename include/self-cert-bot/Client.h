@@ -4,7 +4,7 @@
 
 #ifndef CLIENT_H
 #define CLIENT_H
-#include <iostream>
+#include <filesystem>
 #include <string>
 
 namespace certbot {
@@ -14,6 +14,7 @@ private:
     struct clientConfiguration {
         std::string domain;
         unsigned short challengePort;
+	    std::filesystem::path outPath;
         std::string C;
         std::string ST;
         std::string O;
