@@ -93,7 +93,10 @@ namespace certbot {
 
         SSL *ssl = SSL_new(ctx);
 
-        const int clientSocket = setup_socket_client();
+        const int clientSocket = setup_socket_client(serverIp, serverPort);
+        if (clientSocket == 1) {
+            exit(EXIT_FAILURE);
+        }
         if (SSL_set_fd(ssl, clientSocket) == 0) {
             std::cerr << "Failed to bound the file descriptor\n";
             ERR_print_errors_fp(stderr);

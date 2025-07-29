@@ -86,12 +86,12 @@ addrinfo *resolve_domain(const std::string &domain) {
     return result;
 }
 
-int setup_socket_client() {
+int setup_socket_client(const in_addr_t server_addr, unsigned short server_port) {
     const int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in serverAddress{};
     serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(8080);
-    serverAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // inet_addr("127.0.0.1");
+    serverAddress.sin_port = htons(server_port);
+    serverAddress.sin_addr.s_addr = server_addr;
 
     if (const int status = connect(clientSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress))) {
         std::cerr << "Failed to connect " << status << std::endl;

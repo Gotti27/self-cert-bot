@@ -24,7 +24,7 @@ std::string generate_random_string(int len);
 
 addrinfo* resolve_domain(const std::string &domain);
 
-int setup_socket_client();
+int setup_socket_client(in_addr_t server_addr, unsigned short server_port);
 
 } // certbot
 
