@@ -69,19 +69,9 @@ namespace certbot {
 
         if (ipv4 == nullptr) return;
 
-        const int clientChallengeSocket = socket(AF_INET, SOCK_STREAM, 0);
-        sockaddr_in serverAddress{};
-        serverAddress.sin_family = AF_INET;
-        serverAddress.sin_port = htons(port);
-        serverAddress.sin_addr.s_addr = ipv4->sin_addr.s_addr;
+        const int clientChallengeSocket = setup_socket_client(ipv4->sin_addr.s_addr, port);
 
-        if (const int status = connect(clientChallengeSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress))) {
-            std::cerr << "Failed to connect " << status << std::endl;
-            close(clientChallengeSocket);
-            return;
-        }
-
-        char buffer[24];
+        char buffer[32] = {};
         recv(clientChallengeSocket, buffer, 24, 0);
         close(clientChallengeSocket);
         std::cout << "received challenge " << buffer << std::endl;
@@ -131,7 +121,7 @@ namespace certbot {
     }
 
     [[noreturn]] void serverBody(const int serverSocket, SSL_CTX *ctx,
-        const X509* ca_cert, EVP_PKEY* ca_pkey, std::string passkey
+        const X509* ca_cert, EVP_PKEY* ca_pkey, const std::string &passkey
     ) {
         while (true) {
             sockaddr_in clientAddress = {};
