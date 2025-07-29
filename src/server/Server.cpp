@@ -72,7 +72,7 @@ namespace certbot {
         const int clientChallengeSocket = setup_socket_client(ipv4->sin_addr.s_addr, port);
 
         char buffer[32] = {};
-        recv(clientChallengeSocket, buffer, 24, 0);
+        recv(clientChallengeSocket, buffer, CHALLENGE_SIZE, 0);
         close(clientChallengeSocket);
         std::cout << "received challenge " << buffer << std::endl;
 
