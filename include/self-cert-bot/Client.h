@@ -5,12 +5,15 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 #include <filesystem>
+#include <netinet/in.h>
 #include <string>
 
 namespace certbot {
 
 class Client {
 private:
+    in_addr_t serverIp;
+    unsigned short serverPort;
     struct clientConfiguration {
         std::string domain;
         unsigned short challengePort;

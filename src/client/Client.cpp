@@ -32,6 +32,8 @@ namespace certbot {
         conf.ST = data["ST"].get<std::string>();
         conf.O = data["O"].get<std::string>();
         conf.OU = data["OU"].get<std::string>();
+        serverIp = inet_addr(data["serverIp"].get<std::string>().c_str());
+        serverPort = data["serverPort"].get<unsigned short>();
     }
 
     Client::Client(const std::string &conf_path) {
@@ -39,16 +41,25 @@ namespace certbot {
     }
 
     Client::Client() {
-        std::string domain, country, state, organization, organizationUnit;
-        unsigned short port;
+        std::string domain, country, state, organization, organizationUnit, serverIpString;
+        unsigned short challengePort, serverPort;
 	    std::filesystem::path outPath;
 
+        std::cout << "Server ip: ";
+        std::cin >> serverIpString;
+        serverIp = inet_addr(serverIpString.c_str());
+        std::cout << "Server port: ";
+        std::cin >> serverPort;
+        if (!std::cin.good()) {
+            throw std::runtime_error("server port is not a number");
+        }
+        this->serverPort = serverPort;
         std::cout << "Domain: ";
         std::cin >> domain;
         std::cout << "Challenge port: ";
-        std::cin >> port;
+        std::cin >> challengePort;
         if (!std::cin.good()) {
-            throw std::runtime_error("port is not a number");
+            throw std::runtime_error("challenge port is not a number");
         }
         std::cout << "Out directory: ";
         std::cin >> outPath;
@@ -62,7 +73,7 @@ namespace certbot {
         std::cin >> organizationUnit;
 
         conf.domain = domain;
-        conf.challengePort = port;
+        conf.challengePort = challengePort;
         conf.C = country;
         conf.ST = state;
         conf.O = organization;
@@ -82,7 +93,10 @@ namespace certbot {
 
         SSL *ssl = SSL_new(ctx);
 
-        const int clientSocket = setup_socket_client();
+        const int clientSocket = setup_socket_client(serverIp, serverPort);
+        if (clientSocket == 1) {
+            exit(EXIT_FAILURE);
+        }
         if (SSL_set_fd(ssl, clientSocket) == 0) {
             std::cerr << "Failed to bound the file descriptor\n";
             ERR_print_errors_fp(stderr);
@@ -124,7 +138,6 @@ namespace certbot {
                                         &clientAddressLength);
 
         send(respondSocket, challenge.c_str(), challenge.size(), 0);
-        close(respondSocket);
         close(challengeSocket);
 
         const CertFields cert_fields = {conf.C, conf.ST, conf.O, conf.OU, conf.domain};
