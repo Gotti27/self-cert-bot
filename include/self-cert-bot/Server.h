@@ -19,6 +19,7 @@ private:
         std::string ca_cert_path;
         std::string ca_key_path;
         std::string ca_passkey_path;
+        unsigned short port;
     } conf = {};
 
     void load_configuration(const std::string &configuration_path);

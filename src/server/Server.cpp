@@ -114,13 +114,13 @@ namespace certbot {
         close(clientSocket);
     }
 
-    int configureServer() {
+    int configureServer(unsigned short port) {
         const int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
         sockaddr_in serverAddress{};
         serverAddress.sin_family = AF_INET;
-        serverAddress.sin_port = htons(8080);
-        serverAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // inet_addr("127.0.0.1");
+        serverAddress.sin_port = htons(port);
+        serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
 
         const int bind_result = bind(serverSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress));
         std::cout << "bind_result " << bind_result << std::endl;
@@ -150,6 +150,7 @@ namespace certbot {
     void Server::load_configuration(const std::string &configuration_path) {
         std::ifstream json_file(configuration_path);
         nlohmann::json data = nlohmann::json::parse(json_file);
+        conf.port = data["port"].get<unsigned short>();
         conf.ca_cert_path = data["ca_cert_path"].get<std::string>();
         conf.ca_key_path = data["ca_key_path"].get<std::string>();
         conf.ca_passkey_path = data["ca_passkey_path"].get<std::string>();
@@ -222,7 +223,7 @@ namespace certbot {
         freeaddrinfo(result);
         */
 
-        const int serverSocket = configureServer();
+        const int serverSocket = configureServer(this->conf.port);
         configure_SSL_context();
         std::cout << generate_random_string(64) << std::endl;
 
