@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.30)
-project(self_cert_bot VERSION 0.1.0)
 
+project(self_cert_bot VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 20)
+set(EXECUTABLE_NAME self-cert)
 
-add_library(self_cert_lib
+add_library(self_cert_lib STATIC
         src/client/Client.cpp
         src/server/Server.cpp
         src/utils/cert_utils.cpp
@@ -27,6 +28,7 @@ target_link_libraries(self_cert_lib
         nlohmann_json::nlohmann_json
 )
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${EXECUTABLE_NAME} src/main.cpp)
 
-target_link_libraries(${PROJECT_NAME} self_cert_lib)
+target_link_libraries(${EXECUTABLE_NAME} self_cert_lib)
+
