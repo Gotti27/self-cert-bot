@@ -4,6 +4,7 @@
 
 #include "self-cert-bot/Client.h"
 
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <ostream>
@@ -26,6 +27,7 @@ namespace certbot {
         nlohmann::json data = nlohmann::json::parse(json_file);
         conf.domain = data["domain"].get<std::string>();
         conf.challengePort = data["port"].get<unsigned short>();
+        conf.outPath = data["outPath"].get<std::filesystem::path>();
         conf.C = data["C"].get<std::string>();
         conf.ST = data["ST"].get<std::string>();
         conf.O = data["O"].get<std::string>();
@@ -39,6 +41,7 @@ namespace certbot {
     Client::Client() {
         std::string domain, country, state, organization, organizationUnit;
         unsigned short port;
+	    std::filesystem::path outPath;
 
         std::cout << "Domain: ";
         std::cin >> domain;
@@ -47,6 +50,8 @@ namespace certbot {
         if (!std::cin.good()) {
             throw std::runtime_error("port is not a number");
         }
+        std::cout << "Out directory: ";
+        std::cin >> outPath;
         std::cout << "Country: ";
         std::cin >> country;
         std::cout << "State: ";
@@ -61,6 +66,7 @@ namespace certbot {
         conf.C = country;
         conf.ST = state;
         conf.O = organization;
+        conf.outPath = outPath;
         conf.OU = organizationUnit;
     }
 
@@ -134,6 +140,13 @@ namespace certbot {
         const unsigned char* p = certBuffer.data();
         X509* cert = d2i_X509(nullptr, &p, certBuffer.size());
         std::cout << std::endl << X509ToPEMString(cert) << std::endl;
+
+        std::filesystem::create_directories(conf.outPath);
+        std::filesystem::path cert_path = conf.outPath / std::format("{}.pem", conf.domain);
+        std::filesystem::path key_path = conf.outPath / std::format("{}.key", conf.domain);
+
+        save_certificate(cert, cert_path.c_str());
+        save_key(pkey, key_path.c_str());
 
         EVP_PKEY_free(pkey);
         X509_free(cert);
