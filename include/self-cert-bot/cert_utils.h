@@ -9,6 +9,8 @@
 #include <openssl/types.h>
 
 namespace certbot {
+#define CHALLENGE_SIZE 24
+
     typedef struct CertFieldsStruct {
         std::string C;
         std::string ST;

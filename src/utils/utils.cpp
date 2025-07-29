@@ -80,7 +80,7 @@ addrinfo *resolve_domain(const std::string &domain) {
 
     if (const int s = getaddrinfo(domain.c_str(), nullptr, &hints, &result); s != 0) {
         std::cerr << "getaddrinfo: " << gai_strerror(s);
-        //exit(EXIT_FAILURE);
+        return nullptr;
     }
 
     return result;

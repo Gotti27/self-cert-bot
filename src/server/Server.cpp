@@ -21,83 +21,102 @@
 #include "self-cert-bot/protocol_utils.hpp"
 
 namespace certbot {
-
-    void thread_body(const int clientSocket, const sockaddr_in &clientAddress, SSL_CTX *ctx,
-        const X509* ca_cert, EVP_PKEY* ca_pkey, const char* ca_passkey
-    ) {
-        SSL *ssl = SSL_new(ctx);
-
-        if (SSL_set_fd(ssl, clientSocket) == 0) {
-            std::cerr << "Failed to bound the file descriptor\n";
+    int setup_secure_connection(SSL *ssl, const int clientSocket, const sockaddr_in &clientAddress) {
+        if (const int ret = SSL_set_fd(ssl, clientSocket); ret == 0) {
+            std::cerr << "Failed to bound the file descriptor: " << ret << std::endl;
             ERR_print_errors_fp(stderr);
+            return 1;
         }
 
         if (const int ret = SSL_accept(ssl); ret != 1) {
             std::cerr << "Failed to accept a connection: " << ret << std::endl;
             ERR_print_errors_fp(stderr);
+            return 1;
         }
 
         const char *connected_ip = inet_ntoa(clientAddress.sin_addr);
+        std::cout << "New client connected: " << connected_ip << std::endl;
 
-        std::vector<char> domainVector = receiveSocketMessage(ssl).value();
-        const std::string domain(domainVector.begin(), domainVector.end());
+        return 0;
+    }
 
+    int execute_challenge(SSL *ssl) {
+        const std::string domain(receiveSocketMessage(ssl).value().data());
         std::cout << "requested domain " << domain << std::endl;
 
-        const std::string challenge = generate_random_string(24);
+        const std::string challenge = generate_random_string(CHALLENGE_SIZE);
         sendSocketMessage(ssl, challenge);
-
         std::cout << "challenge sent " << challenge << ", size: " << challenge.size() << std::endl;
 
         unsigned short port;
         std::memcpy(&port, receiveSocketMessage(ssl).value().data(), sizeof(unsigned short));
-
         std::cout << "port: " << port << std::endl;
 
         addrinfo *result = resolve_domain(domain);
-
-        const sockaddr_in *ipv4 = nullptr;
-        for (const addrinfo *p = result; p != nullptr; p = p->ai_next) {
-            char ipStr[INET_ADDRSTRLEN];
-            // const sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
-            ipv4 = reinterpret_cast<sockaddr_in *>(p->ai_addr);
-
-            inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
-            std::cout << ipStr << std::endl;
-            break;
+        if (result == nullptr) {
+            return 2;
         }
 
-        if (ipv4 == nullptr) return;
+        const sockaddr_in *ipv4 = nullptr;
+
+        char ipStr[INET_ADDRSTRLEN];
+        ipv4 = reinterpret_cast<sockaddr_in *>(result->ai_addr);
+
+        inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
+        std::cout << ipStr << std::endl;
+
+        if (ipv4 == nullptr) return 2;
 
         const int clientChallengeSocket = setup_socket_client(ipv4->sin_addr.s_addr, port);
+        freeaddrinfo(result);
 
         char buffer[32] = {};
-        recv(clientChallengeSocket, buffer, 24, 0);
+        recv(clientChallengeSocket, buffer, CHALLENGE_SIZE, 0);
         close(clientChallengeSocket);
         std::cout << "received challenge " << buffer << std::endl;
 
-        const bool isChallengeCorrect = challenge == std::string(buffer);
+        return challenge == std::string(buffer) ? 0 : 1;
+    }
 
-        if (isChallengeCorrect) {
-            std::cout << "Challenge matches" << std::endl;
+    int issue_certificate(SSL *ssl, const X509 *ca_cert, EVP_PKEY *ca_pkey) {
+        std::cout << "Challenge matches" << std::endl;
 
-            auto cert_fields_buffer = receiveSocketMessage(ssl).value();
-            const CertFields* p_obj = reinterpret_cast<CertFields*>(cert_fields_buffer.data());
+        auto cert_fields_buffer = receiveSocketMessage(ssl).value();
+        const CertFields *p_obj = reinterpret_cast<CertFields *>(cert_fields_buffer.data());
 
-            const auto serialized_p_key = receiveSocketMessage(ssl).value();
-            EVP_PKEY* child_pkey = deserializePublicKey(std::vector<unsigned char>(serialized_p_key.begin(), serialized_p_key.end()));
+        const auto serialized_p_key = receiveSocketMessage(ssl).value();
+        EVP_PKEY *child_pkey = deserializePublicKey(
+            std::vector<unsigned char>(serialized_p_key.begin(), serialized_p_key.end()));
 
-            X509* child_cert = craft_certificate(ca_cert, ca_pkey, child_pkey, *p_obj);
+        X509 *child_cert = craft_certificate(ca_cert, ca_pkey, child_pkey, *p_obj);
 
-            const std::vector<unsigned char> serializedCert = serializeX509ToDER(child_cert);
-
-            sendSocketMessageRaw(ssl, serializedCert);
-
-            X509_free(child_cert);
-            EVP_PKEY_free(child_pkey);
+        if (child_cert == nullptr) {
+            return 1;
         }
 
-        freeaddrinfo(result);
+        const std::vector<unsigned char> serializedCert = serializeX509ToDER(child_cert);
+
+        sendSocketMessageRaw(ssl, serializedCert);
+
+        X509_free(child_cert);
+        EVP_PKEY_free(child_pkey);
+
+        return 0;
+    }
+
+    void thread_body(const int clientSocket, const sockaddr_in &clientAddress, SSL_CTX *ctx,
+                     const X509 *ca_cert, EVP_PKEY *ca_pkey
+    ) {
+        SSL *ssl = SSL_new(ctx);
+
+        if (const int ret = setup_secure_connection(ssl, clientSocket, clientAddress); ret == 0) {
+            if (execute_challenge(ssl) == 0) {
+                issue_certificate(ssl, ca_cert, ca_pkey);
+            } else {
+                // TODO: blacklist client
+                std::cout << "Challenge does not match" << std::endl;
+            }
+        }
 
         SSL_shutdown(ssl);
         SSL_free(ssl);
@@ -121,8 +140,7 @@ namespace certbot {
     }
 
     [[noreturn]] void serverBody(const int serverSocket, SSL_CTX *ctx,
-        const X509* ca_cert, EVP_PKEY* ca_pkey, const std::string &passkey
-    ) {
+                                 const X509 *ca_cert, EVP_PKEY *ca_pkey) {
         while (true) {
             sockaddr_in clientAddress = {};
             socklen_t clientAddressLength = sizeof clientAddress;
@@ -131,7 +149,7 @@ namespace certbot {
                                             &clientAddressLength);
 
             auto thread = std::thread(thread_body, clientSocket, clientAddress, ctx,
-                ca_cert, ca_pkey, passkey.c_str()
+                                      ca_cert, ca_pkey
             );
             thread.detach();
         }
@@ -172,24 +190,6 @@ namespace certbot {
             std::cerr << "Error reading certificate!" << std::endl;
             exit(EXIT_FAILURE);
         }
-
-        /*
-        if (const X509_NAME *subject = X509_get_issuer_name(ca_cert)) {
-            char buffer[256];
-            const auto entry = X509_NAME_get_entry(subject, 3);
-
-            const auto s = X509_NAME_ENTRY_get_data(entry);
-
-            X509_NAME_oneline(subject, buffer, sizeof(buffer));
-            std::cout << "Cert Subject: " << buffer << std::endl << s->data << std::endl;
-        } else {
-            std::cerr << "Failed to get subject name!" << std::endl;
-        }
-        */
-
-        // BIO_free(bio_cert);
-
-        // this->root_cert;
     }
 
     Server::~Server() {
@@ -199,25 +199,10 @@ namespace certbot {
     }
 
     void Server::start() {
-        /*
-        addrinfo *result = resolve_domain(domain);
-
-        for (const addrinfo *p = result; p != nullptr; p = p->ai_next) {
-            char ipStr[INET_ADDRSTRLEN];
-            const sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(p->ai_addr);
-
-            inet_ntop(AF_INET, &ipv4->sin_addr, ipStr, sizeof(ipStr));
-            std::cout << ipStr << std::endl;
-        }
-
-        freeaddrinfo(result);
-        */
-
         const int serverSocket = configureServer(this->conf.port);
         configure_SSL_context();
-        std::cout << generate_random_string(64) << std::endl;
 
-        serverBody(serverSocket, ctx, ca_cert, ca_pkey, ca_passkey);
+        serverBody(serverSocket, ctx, ca_cert, ca_pkey);
     }
 
     void Server::configure_SSL_context() {
