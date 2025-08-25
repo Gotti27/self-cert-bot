@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
 
-project(self_cert_bot VERSION 1.0.0)
+project(self_cert_bot VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_NAME self-cert)
 
