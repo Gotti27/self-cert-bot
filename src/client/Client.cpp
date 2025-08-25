@@ -27,13 +27,13 @@ namespace certbot {
         nlohmann::json data = nlohmann::json::parse(json_file);
         conf.domain = data["domain"].get<std::string>();
         conf.challengePort = data["port"].get<unsigned short>();
-        conf.outPath = data["outPath"].get<std::filesystem::path>();
+        conf.outPath = data["out_path"].get<std::filesystem::path>();
         conf.C = data["C"].get<std::string>();
         conf.ST = data["ST"].get<std::string>();
         conf.O = data["O"].get<std::string>();
         conf.OU = data["OU"].get<std::string>();
-        serverIp = inet_addr(data["serverIp"].get<std::string>().c_str());
-        serverPort = data["serverPort"].get<unsigned short>();
+        serverIp = inet_addr(data["server_ip"].get<std::string>().c_str());
+        serverPort = data["server_port"].get<unsigned short>();
     }
 
     Client::Client(const std::string &conf_path) {
