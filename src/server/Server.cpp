@@ -82,13 +82,14 @@ namespace certbot {
         std::cout << "Challenge matches" << std::endl;
 
         auto cert_fields_buffer = receiveSocketMessage(ssl).value();
-        const CertFields *p_obj = reinterpret_cast<CertFields *>(cert_fields_buffer.data());
+
+        const auto cert_fields = static_cast<CertFields>(cert_fields_buffer.data());
 
         const auto serialized_p_key = receiveSocketMessage(ssl).value();
         EVP_PKEY *child_pkey = deserializePublicKey(
             std::vector<unsigned char>(serialized_p_key.begin(), serialized_p_key.end()));
 
-        X509 *child_cert = craft_certificate(ca_cert, ca_pkey, child_pkey, *p_obj);
+        X509 *child_cert = craft_certificate(ca_cert, ca_pkey, child_pkey, cert_fields);
 
         if (child_cert == nullptr) {
             return 1;
@@ -133,6 +134,10 @@ namespace certbot {
 
         const int bind_result = bind(serverSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress));
         std::cout << "bind_result " << bind_result << std::endl;
+
+        if (bind_result == -1) {
+            perror("Socket binding failed");
+        }
 
         listen(serverSocket, 5);
         std::cout << "Server listening" << std::endl;
