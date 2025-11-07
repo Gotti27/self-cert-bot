@@ -1,0 +1,9 @@
+.DS_Store
+.git
+.github
+.gitignore
+.idea
+cmake-build-*
+data
+settings
+
